@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<th:block th:include="fragments/common"></th:block>
+<title>books</title>
+</head>
+<script>
+function memberCheck() {
+	
+	if ("" == $("#join_id").val()) {
+		alert("아이디를 입력해주세요");
+		$("#join_id").focus();
+		return;
+	}
+
+	if ("" == $("#join_pw").val()) {
+		alert("비밀번호를 입력해주세요");
+		$("#join_pw").focus();
+		return;
+	}
+	
+	if ("" == $("#join_pwchk").val()) {
+		alert("비밀번호 확인을 입력해주세요");
+		$("#join_pwchk").focus();
+		return;
+	}
+	
+	
+	$.ajax({
+		url : "/pwdCheck"
+		,data: {id : $("#join_id").val(), pw : $("#join_pw").val(), pwchk : $("#join_pwchk").val()}
+		,success : function (data) {
+			alert(data.msg);
+		}
+		,error : function (req, status, error) {
+			exceptionAlert(req.responseJSON);
+		}
+	})
+}
+
+function login() {
+	
+	if ("" == $("#id").val()) {
+		alert("아이디를 입력해주세요");
+		$("#id").focus();
+		return false;
+	}
+	
+	if ("" == $("#pwd").val()) {
+		alert("비밀번호를 입력해주세요");
+		$("#pw").focus();
+		return false;
+	}
+	
+	return true;
+}
+</script>
+<body>
+<div class="container-fluid" style="text-align:center">
+	<div class="panel panel-default mainjoin">
+		<div class="panel-heading">
+			로그인
+		</div>
+		<div class="panel-body">
+			<form name="member" action="login" method="POST" onsubmit="return login();">
+				<div class="form-group">
+					<label for="id">아이디</label>
+					<input type="text" class="form-control" id="id" name="id" placeholder="아이디을 입력하세요">
+				</div>
+				<div class="form-group">
+					<label for="pw">비밀번호</label>
+					<input type="password" class="form-control" id="pwd" name="pwd" placeholder="비밀번호">
+				</div>
+				<p style="color:red" th:text="${resultMsg}"></p>
+				<button type="submit" class="btn btn-default">로그인</button>
+				<button type="button" onclick="$('#join').modal();" class="btn btn-default">회원가입</button>
+			</form>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="join" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				<h4 class="modal-title">회원가입</h4>
+			</div>
+			<div class="modal-body">
+				<div style="text-align:center;">
+					<div class="panel panel-default">
+						<div class="panel-body" style="text-align:left">
+							<div class="form-group">
+								<label for="id">아이디</label>
+								<input type="email" class="form-control" id="join_id" placeholder="아이디을 입력하세요">
+							</div>
+							<div class="form-group">
+								<label for="pw">비밀번호</label>
+								<input type="password" class="form-control" id="join_pw" placeholder="비밀번호">
+							</div>
+							<div class="form-group">
+								<label for="pwchk">비밀번호 확인</label>
+								<input type="password" class="form-control" id="join_pwchk" placeholder="비밀번호 확인">
+							</div>
+							<button type="button" onclick="memberCheck();" class="btn btn-default">가입</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">닫기</button>
+			</div>
+		</div>
+	</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<th:block th:include="fragments/common"></th:block>
+<title>books</title>
+</head>
+<script type="text/javascript">
+
+var searchWord = "";
+
+function searchBooks(page, isSearch) {
+	searchWord = $("#searchWord").val();
+	
+	if ("" == searchWord) {
+		alert("검색어를 입력해주세요.")
+		$("#searchWord").focus();
+		return;
+	}
+	
+	$.ajax({
+		url : "bookSearch"
+		,type :"POST"
+		,data : {searchWord : searchWord, page : page, isSearch : isSearch}
+		,success : function (data) {
+			var html = "";
+			$("#searchResult tr").remove();
+			if (data.documents.length > 0) {
+				$.each(data.documents, function (idx, value) {
+					html += "<tr>";
+					html += "	<td><img src='"+ value.thumbnail +"'/></td>";
+					html += "	<td><a href='javascript:getDetail(\"" + $.trim(value.isbn).split(" ")[0] + "\")'>" + value.title + "</a></td>";
+					html += "</tr>"
+				})
+			} else {
+				html = "<tr><td>검색결과가 없습니다.</td></tr>";
+			}
+			$("#searchResult").append(html);
+			setPageNation(data.pageUtil);
+		}
+		,error : function (req, status, error) {
+			exceptionAlert(req.responseJSON);
+		}
+	})
+}
+
+function setPageNation(pageUtil) {
+	
+	$("#pageNav").html("");
+	
+	if (pageUtil) {
+		var html = "";
+		html += "<li>";
+		html += "	<a href='javascript:searchBooks(" + pageUtil.previous + ", false)' aria-label='Previous'>";
+		html += "	<span aria-hidden='true'>&laquo;</span>";
+		html += "	</a>";
+		html += "</li>";
+		for (var i = pageUtil.listStartNum; i <= pageUtil.listEndNum; i++) {
+			html += "<li " + (pageUtil.currentListNum == i ? "class='active'" : "") + "><a href='javascript:searchBooks(" + i + ", false)'>" + i + "</a></li>";
+		}
+		html += "<li>";
+		html += "	<a href='javascript:searchBooks(" + pageUtil.next + ", false)' aria-label='Next'>";
+		html += "		<span aria-hidden='true'>&raquo;</span>";
+		html += "	</a>";
+		html += "</li>";
+		$("#pageNav").html(html);
+	}
+}
+
+function getDetail(isbn) {
+	$.ajax({
+		url : "detail"
+		,type :"POST"
+		,data : {isbn : isbn}
+		,success : function (data) {
+			data = data.documents[0];
+			console.log(data);
+			$("#myModalLabel").html(data.title);
+			$("#bImg").attr("src",data.thumbnail);
+			$("#publisher").html(data.publisher);
+			$("#price").html(getMoneyPoint(data.price) + "원 / " + getMoneyPoint(data.sale_price) + "원");
+			$("#authors").html(data.authors);
+			$("#bIsbn").html(data.isbn.replace(" ",", "));
+			$("#datetime").html(getDateYMD(data.datetime));
+			$("#contents").html(data.contents);
+			$("#bookDetail").modal();
+		}
+		,error : function (req, status, error) {
+			exceptionAlert(req.responseJSON);
+		}
+	})
+}
+
+function getMyHistory(page) {
+	
+	$.ajax({
+		url : "getMyHistory"
+		,type : "POST"
+		,data : {page : page}
+		,success : function (data) {
+			$("#myHisTable tr").not(".title").remove();
+			var html = "";
+			
+			if (data.content.length > 0) {
+				$.each(data.content, function (idx, value) {
+					html += "<tr>";
+					html += "	<td>" + value.searchWord + "</td>";
+					html += "	<td>" + getDateYMDHm(value.regdt) + "</td>";
+					html += "</tr>";
+				})
+			} else {
+					html += "<tr>";
+					html += "	<td colspan='2'>히스토리가 없습니다.</td>";
+					html += "</tr>";
+			}
+			
+			$("#hisPre").attr("disabled", data.first).attr("onclick", "getMyHistory(" + (page-1) + ")");
+			$("#hisNext").attr("disabled", data.last).attr("onclick", "getMyHistory(" + (page+1) + ")");
+			
+			$("#myHisTable").append(html)
+			$("#myHistory").modal();
+		}
+		,error : function (req, status, error) {
+			exceptionAlert(req.responseJSON);
+		}
+	})
+	
+}
+
+function getPopularSearch() {
+	
+	$.ajax({
+		type : "POST"
+		,url : "getPopularSearch"
+		,success : function (data) {
+			$("#popularTable tr").not(".title").remove();
+			var html = "";
+			if (data.content.length > 0) {
+				$.each(data.content, function (index, value) {
+					html += "<tr>";
+					html += "	<td>" + value.searchWord + "</td>";
+					html += "	<td>" + value.cnt + "</td>";
+					html += "</tr>";
+				})
+			} else {
+				html += "<tr>";
+				html += "	<td colspan='2'>인기검색어가 없습니다.</td>";
+				html += "</tr>";
+			}
+			
+			$("#popularTable").append(html);
+		}
+		,error : function (req, status, error) {
+			exceptionAlert(req.responseJSON);
+		}
+	})
+	
+	$("#popularWord").modal();
+	
+}
+
+function logout() {
+	location.href = "/logout";
+}
+</script>
+<body>
+<div class="container-fluid">
+	<div class="panel panel-default">
+		<div class="panel-heading">
+			<input type="text" id="searchWord" onkeydown="if(event.keyCode==13)searchBooks(1, true);"/>
+			<input type="button" class="btn btn-default" value="검색" onclick="searchBooks(1, true);"/>
+			<input type="button" class="btn btn-default" value="내 검색 기록" onclick="getMyHistory(0);"/>
+			<input type="button" class="btn btn-default" value="인기 검색어" onclick="getPopularSearch();"/>
+			<input type="button" class="btn btn-default" value="로그아웃" onclick="logout();"/>
+		</div>
+		<div class="panel-body">
+			<table class="table" id="searchResult">
+				<colgroup>
+					<col width="15%">
+					<col width="70%">
+				</colgroup>
+				<tr>
+					<td></td>
+					<td></td>
+				</tr>
+			</table>
+			<nav>
+				<ul class="pagination" id="pageNav">
+				</ul>
+			</nav>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="bookDetail" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+	<div class="modal-dialog modal-lg" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				<h4 class="modal-title" id="myModalLabel"></h4>
+			</div>
+			<div class="modal-body">
+				<div style="text-align:center;">
+					<div class="panel panel-default">
+						<div class="panel-body">
+							<table class="table">
+								<colgroup>
+									<col width="15%">
+									<col width="20%">
+									<col width="65%">
+								</colgroup>
+								<tr>
+									<td rowspan="7">
+										<img id="bImg"/>
+									</td>
+								</tr>
+								<tr>
+									<th>출판사</th>
+									<td id="publisher"></td>
+								</tr>
+								<tr>
+									<th>정가/판매가</th>
+									<td id="price"></td>
+								</tr>
+								<tr>
+									<th>저자</th>
+									<td id="authors"></td>
+								</tr>
+								<tr>
+									<th>ISBN</th>
+									<td id="bIsbn"></td>
+								</tr>
+								<tr>
+									<th>출판일</th>
+									<td id="datetime"></td>
+								</tr>
+								<tr>
+									<th>소개</td>
+									<td id="contents"></td>
+								</tr>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">닫기</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="myHistory" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				<h4 class="modal-title">내 검색 기록</h4>
+			</div>
+			<div class="modal-body">
+				<div style="text-align:center;">
+					<div class="panel panel-default">
+						<div class="panel-body">
+							<table class="table" id="myHisTable">
+								<colgroup>
+									<col width="50%">
+									<col width="50%">
+								</colgroup>
+								<tr class="title">
+									<th style="text-align:center;">검색어</th>
+									<th style="text-align:center;">날짜</th>
+								</tr>
+							</table>
+							<div class="container-fluid">
+								<div class="panel panel-default">
+									<div class="panel-heading">
+										<input type="button" id="hisPre" class="btn btn-default" value="이전" onclick="getMyHistory();"/>
+										<input type="button" id="hisNext" class="btn btn-default" value="다음" onclick="getMyHistory();"/>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">닫기</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="popularWord" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				<h4 class="modal-title">인기 검색어</h4>
+			</div>
+			<div class="modal-body">
+				<div style="text-align:center;">
+					<div class="panel panel-default">
+						<div class="panel-body">
+							<table class="table" id="popularTable">
+								<colgroup>
+									<col width="50%">
+									<col width="50%">
+								</colgroup>
+								<tr class="title">
+									<th style="text-align:center;">검색어</th>
+									<th style="text-align:center;">카운트</th>
+								</tr>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">닫기</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+</body>
+</html>
